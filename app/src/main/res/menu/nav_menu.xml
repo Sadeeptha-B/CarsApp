@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <item
+        android:id="@+id/add_car_nav"
+        android:title="@string/add_car" />
+
+    <item
+        android:id="@+id/remove_last_nav"
+        android:title="@string/remove_last" />
+
+    <item
+        android:id="@+id/remove_all_nav"
+        android:title="@string/remove_all" />
+</menu>

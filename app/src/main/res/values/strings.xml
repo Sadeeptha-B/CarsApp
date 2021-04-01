@@ -1,0 +1,18 @@
+<resources>
+    <string name="app_name">CarsApp_Week2</string>
+    <string name="cars_app_title">Cars App (Sadeeptha)</string>
+    <string name="car_maker">Maker</string>
+    <string name="car_year">Year</string>
+    <string name="car_price">Price</string>
+    <string name="car_model">Model</string>
+    <string name="car_color">Color</string>
+    <string name="car_seats">Seats</string>
+    <string name="car_address">Address</string>
+    <string name="add_car">Add Car</string>
+    <string name="remove_last">Remove Last Car</string>
+    <string name="remove_all">Remove All Cars</string>
+    <string name="clear_all">Clear All</string>
+    <string name="acc_desc_drw_open">Open</string>
+    <string name="acc_desc_drw_close">Close</string>
+
+</resources>
