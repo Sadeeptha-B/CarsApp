@@ -15,7 +15,6 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -33,6 +32,7 @@ import java.util.StringTokenizer;
 public class MainActivity extends AppCompatActivity {
 
     public static final String CAR_LIST_VIEW = "CAR_LIST_VIEW";
+
     /*Shared preference files and keys */
     private static SharedPreferences carFile;
     public static final String CAR_FILE = "car_data";
@@ -66,7 +66,7 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.drawer_layout);
 
         /* Toolbar */
-        toolbar = findViewById(R.id.toolbar);
+        toolbar = findViewById(R.id.toolbar1);
         setSupportActionBar(toolbar);
 
         /*Set navigation handler*/
@@ -213,6 +213,10 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    public void listAllItems(){
+        Intent carListIntent = new Intent(this, ListCarsActivity.class);
+        startActivity(carListIntent);
+    }
 
     private void showToast(String msg, int length){
         Toast myToast = Toast.makeText(this, msg, length);
@@ -290,6 +294,12 @@ public class MainActivity extends AppCompatActivity {
                 case R.id.remove_all_nav:
                     removeAllCars();
                     break;
+                case R.id.list_all_items:
+                    listAllItems();
+                    break;
+                case R.id.close:
+                    finish();
+                    break;
             }
 
             drawer.closeDrawer(GravityCompat.START);
@@ -311,7 +321,11 @@ public class MainActivity extends AppCompatActivity {
             case R.id.clear_all:
                 clearAll();
                 break;
+            case R.id.total_cars:
+                showToast("Total number of cars: " + dataSource.size(), Toast.LENGTH_SHORT);
+                break;
         }
+
         return true;
     }
 }

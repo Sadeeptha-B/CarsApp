@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">CarsApp_Week2</string>
+    <string name="app_name">CarsApp</string>
     <string name="cars_app_title">Cars App (Sadeeptha)</string>
     <string name="car_maker">Maker</string>
     <string name="car_year">Year</string>
@@ -14,5 +14,7 @@
     <string name="clear_all">Clear All</string>
     <string name="acc_desc_drw_open">Open</string>
     <string name="acc_desc_drw_close">Close</string>
+    <string name="close">Close</string>
+    <string name="total_cars">Total cars</string>
 
 </resources>

@@ -14,6 +14,8 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.CarsApp_Week2">
+        <activity android:name=".ListCarsActivity"></activity>
+
         <receiver
             android:name=".SMSReceiver"
             android:enabled="true"
@@ -23,7 +25,6 @@
                 <action android:name="android.provider.Telephony.SMS_RECEIVED" />
             </intent-filter>
         </receiver>
-
 
         <activity android:name=".MainActivity">
             <intent-filter>
