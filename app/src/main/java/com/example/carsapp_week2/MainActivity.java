@@ -15,6 +15,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -25,7 +26,10 @@ import android.widget.Toast;
 
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.navigation.NavigationView;
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 
+import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.StringTokenizer;
 
@@ -34,11 +38,15 @@ public class MainActivity extends AppCompatActivity {
     public static final String CAR_LIST_VIEW = "CAR_LIST_VIEW";
 
     /*Shared preference files and keys */
-    private static SharedPreferences carFile;
-    public static final String CAR_FILE = "car_data";
+    private static SharedPreferences singleCarFile;
+    private static SharedPreferences.Editor singleCarFileEditor;
+    public static final String SINGLE_CAR_FILE = "single_car_data";
 
-    private static SharedPreferences.Editor carFileEditor;
-    private static SharedPreferences.Editor carMakerEditor;
+    private static SharedPreferences carsListFile;
+    private static SharedPreferences.Editor carsListEditor;
+    public static final String CARS_LIST_FILE = "CARS_LIST_FILE";
+    public static final String CARS_LIST = "CARS_LIST";
+
 
     /*Fields*/
     private CompactEditText editTextMaker;
@@ -57,7 +65,10 @@ public class MainActivity extends AppCompatActivity {
     ListView listView;
 
     ArrayList<String> dataSource = new ArrayList<String>();
+    ArrayList<String> completeData = new ArrayList<String>();
+
     ArrayAdapter adapter;
+    Gson gson = new Gson();
 
 
     @Override
@@ -65,22 +76,61 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.drawer_layout);
 
+        /*Permissions*/
+        ActivityCompat.requestPermissions(this,
+                new String[]{Manifest.permission.SEND_SMS, Manifest.permission.RECEIVE_SMS, Manifest.permission.READ_SMS}, 0);
+
+
+        /*SharedPreference Files */
+        singleCarFile = getSharedPreferences(SINGLE_CAR_FILE, 0);
+        singleCarFileEditor = singleCarFile.edit();
+
+        carsListFile = getSharedPreferences(CARS_LIST_FILE, 0);
+        carsListEditor = carsListFile.edit();
+
+        String cars = carsListFile.getString(CARS_LIST, "");
+
+        if (cars != ""){
+            Type type = new TypeToken<ArrayList<String>>() {}.getType();
+            completeData = gson.fromJson(cars, type);
+
+            for (int i=0; i< completeData.size(); i++){
+                String[] strArr = completeData.get(i).split("\\ \\|\\ ");
+                dataSource.add(strArr[0] + " | " + strArr[1]);
+            }
+        }
+
+        initializeUIComponents();
+
+        /* Broadcast receivers*/
+        IntentFilter intentFilter = new IntentFilter(SMSReceiver.SMS_FILTER);
+        registerReceiver(myBroadcastReceiver, intentFilter);
+
+        //EditText field instantiated
+        editTextMaker = new CompactEditText(this, "editTextMaker");
+        editTextModel = new CompactEditText(this, "editTextModel");
+        editTextYear = new CompactEditText(this, "editTextYear");
+        editTextColor = new CompactEditText(this, "editTextColor");
+        editTextSeats = new CompactEditText(this, "editTextSeats");
+        editTextPrice = new CompactEditText(this, "editTextPrice");
+        editTextAddress = new CompactEditText(this, "editTextAddress");
+    }
+
+
+    private void initializeUIComponents(){
         /* Toolbar */
         toolbar = findViewById(R.id.toolbar1);
         setSupportActionBar(toolbar);
 
-        /*Set navigation handler*/
-        navigationView = findViewById(R.id.nav_view);
-        navigationView.setNavigationItemSelectedListener(new NavHandler());
-
-
-        drawer = findViewById(R.id.drawer_layout);
-
         /*Link drawer and toolbar*/
+        drawer = findViewById(R.id.drawer_layout);
         ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(this, drawer, toolbar, R.string.acc_desc_drw_open, R.string.acc_desc_drw_close);
         drawer.addDrawerListener(toggle);
         toggle.syncState();
 
+        /*Set navigation handler*/
+        navigationView = findViewById(R.id.nav_view);
+        navigationView.setNavigationItemSelectedListener(new NavHandler());
 
         /*Floating Action Button*/
         fabBtn = findViewById(R.id.fab);
@@ -93,37 +143,9 @@ public class MainActivity extends AppCompatActivity {
 
         /*ListView*/
         listView = findViewById(R.id.listView);
-        if (savedInstanceState != null){
-            dataSource = savedInstanceState.getStringArrayList(CAR_LIST_VIEW);
-        }
-
         adapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, dataSource);
         listView.setAdapter(adapter);
         listView.setNestedScrollingEnabled(true);
-
-        /*Permissions*/
-        ActivityCompat.requestPermissions(this,
-                new String[]{Manifest.permission.SEND_SMS, Manifest.permission.RECEIVE_SMS, Manifest.permission.READ_SMS}, 0);
-
-
-        /*SharedPreference Files */
-        carFile = getSharedPreferences(CAR_FILE, 0);
-        carFileEditor = carFile.edit();
-
-
-        /* Broadcast receivers*/
-        IntentFilter intentFilter = new IntentFilter(SMSReceiver.SMS_FILTER);
-        registerReceiver(myBroadcastReceiver, intentFilter);
-
-
-        //EditText field instantiated
-        editTextMaker = new CompactEditText(this, "editTextMaker");
-        editTextModel = new CompactEditText(this, "editTextModel");
-        editTextYear = new CompactEditText(this, "editTextYear");
-        editTextColor = new CompactEditText(this, "editTextColor");
-        editTextSeats = new CompactEditText(this, "editTextSeats");
-        editTextPrice = new CompactEditText(this, "editTextPrice");
-        editTextAddress = new CompactEditText(this, "editTextAddress");
     }
 
 
@@ -145,26 +167,14 @@ public class MainActivity extends AppCompatActivity {
         storeData();
     }
 
-    @Override
-    protected void onSaveInstanceState(@NonNull Bundle outState) {
-        super.onSaveInstanceState(outState);
-        outState.putStringArrayList(CAR_LIST_VIEW, dataSource);
-    }
-
-//    @Override
-//    protected void onRestoreInstanceState(@NonNull Bundle savedInstanceState) {
-//        super.onRestoreInstanceState(savedInstanceState);
-//        dataSource = savedInstanceState.getStringArrayList(CAR_LIST_VIEW);
-//        adapter.notifyDataSetChanged();
-//    }
 
     private void retrieveStringElement(CompactEditText field){
-        String content = carFile.getString(field.getKey(), "");
+        String content = singleCarFile.getString(field.getKey(), "");
         field.setEditTextString(content);
     }
 
     private void retrieveNumElement(CompactEditText field){
-        int content = carFile.getInt(field.getKey(), 0);
+        int content = singleCarFile.getInt(field.getKey(), 0);
         if (content == 0){
             field.setEditTextString("");
         } else{
@@ -174,24 +184,28 @@ public class MainActivity extends AppCompatActivity {
 
     /*For storing persistent data*/
     private void storeData(){
-        carFileEditor.putString(editTextMaker.getKey(), editTextMaker.getEditTextString());
-        carFileEditor.putString(editTextModel.getKey(), editTextModel.getEditTextString());
-        carFileEditor.putInt(editTextYear.getKey(), editTextYear.getEditTextNum());
-        carFileEditor.putString(editTextColor.getKey(), editTextColor.getEditTextString());
-        carFileEditor.putInt(editTextSeats.getKey(), editTextSeats.getEditTextNum());
-        carFileEditor.putInt(editTextPrice.getKey(), editTextPrice.getEditTextNum());
-        carFileEditor.putString(editTextAddress.getKey(), editTextAddress.getEditTextString());
-        carFileEditor.apply();
+        singleCarFileEditor.putString(editTextMaker.getKey(), editTextMaker.getEditTextString());
+        singleCarFileEditor.putString(editTextModel.getKey(), editTextModel.getEditTextString());
+        singleCarFileEditor.putInt(editTextYear.getKey(), editTextYear.getEditTextNum());
+        singleCarFileEditor.putString(editTextColor.getKey(), editTextColor.getEditTextString());
+        singleCarFileEditor.putInt(editTextSeats.getKey(), editTextSeats.getEditTextNum());
+        singleCarFileEditor.putInt(editTextPrice.getKey(), editTextPrice.getEditTextNum());
+        singleCarFileEditor.putString(editTextAddress.getKey(), editTextAddress.getEditTextString());
+        singleCarFileEditor.apply();
+
+        String carsList = gson.toJson(completeData);
+        carsListEditor.putString(CARS_LIST, carsList).apply();
     }
 
 
-    public void addCar(){
+    private void addCar(){
         boolean added = !editTextMaker.getEditTextString().isEmpty();
         String msg;
 
         if (added){
             msg = "We added a new car (" + editTextMaker.getEditTextString() +")";
             dataSource.add(editTextMaker.getEditTextString() + " | " + editTextModel.getEditTextString());
+            completeData.add(generateAddString());
             adapter.notifyDataSetChanged();
         } else{
             msg = "Please enter a maker";
@@ -199,22 +213,33 @@ public class MainActivity extends AppCompatActivity {
         showToast(msg, Toast.LENGTH_SHORT);
     }
 
-    public void removeLastCar(){
+    private String generateAddString(){
+        return editTextMaker.getEditTextString() + " | " + editTextModel.getEditTextString() + " | " +
+                editTextYear.getEditTextString() + " | " + editTextColor.getEditTextString() + " | " +
+                editTextSeats.getEditTextString() + " | " + editTextPrice.getEditTextString() + " | " +
+                editTextAddress.getEditTextString();
+    }
+
+    private void removeLastCar(){
         if (!dataSource.isEmpty()){
             dataSource.remove(dataSource.size() - 1);
+            completeData.remove(completeData.size() - 1);
             adapter.notifyDataSetChanged();
         }
+
     }
 
-    public void removeAllCars(){
+    private void removeAllCars(){
         if (!dataSource.isEmpty()){
             dataSource.clear();
+            completeData.clear();
             adapter.notifyDataSetChanged();
         }
     }
 
-    public void listAllItems(){
+    private void listAllItems(){
         Intent carListIntent = new Intent(this, ListCarsActivity.class);
+        carListIntent.putExtra(CARS_LIST, completeData);
         startActivity(carListIntent);
     }
 
@@ -224,7 +249,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     /**Loops through all elements and clears them.**/
-    public void clear(){
+    private void clear(){
         ArrayList<EditText> fields = new ArrayList<>();
 
         fields.add(findViewById(R.id.editTextMaker));
@@ -244,11 +269,11 @@ public class MainActivity extends AppCompatActivity {
     }
 
     /**Clear and forget persistent data.**/
-    public void clearAll(){
+    private void clearAll(){
         clear();
 
-        carFileEditor.clear();
-        carFileEditor.apply();
+        singleCarFileEditor.clear();
+        singleCarFileEditor.apply();
     }
 
     BroadcastReceiver myBroadcastReceiver = new BroadcastReceiver() {
