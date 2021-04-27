@@ -2,12 +2,15 @@ package com.example.carsapp_week2;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
+import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
+
+import com.example.carsapp_week2.provider.CarViewModel;
 
 import java.util.ArrayList;
 
@@ -16,7 +19,9 @@ public class ListCarsActivity extends AppCompatActivity {
     Toolbar toolbar;
     RecyclerView recyclerView;
     RecyclerView.LayoutManager layoutManager;
-    RecyclerView.Adapter adapter;
+    MyRecyclerViewAdapter adapter;
+
+    private CarViewModel mCarViewModel;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -32,8 +37,14 @@ public class ListCarsActivity extends AppCompatActivity {
         layoutManager = new LinearLayoutManager(this);
         recyclerView.setLayoutManager(layoutManager);
 
-        adapter = new MyRecyclerViewAdapter(data, this);
+        adapter = new MyRecyclerViewAdapter(this);
         recyclerView.setAdapter(adapter);
+
+        mCarViewModel = new ViewModelProvider(this).get(CarViewModel.class);
+        mCarViewModel.getAllCars().observe(this, newData -> {
+            adapter.setData(newData);
+            adapter.notifyDataSetChanged();
+        });
     }
 
     public void goBack(View v){

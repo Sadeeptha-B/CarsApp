@@ -29,4 +29,8 @@ public class CarViewModel extends AndroidViewModel {
     public void deleteAll(){
         mRepository.deleteAll();
     }
+
+    public LiveData<Integer> getCarCount() { return mRepository.getCarCount();}
+
+    public void deleteCar(String model){ mRepository.deleteCar(model);}
 }

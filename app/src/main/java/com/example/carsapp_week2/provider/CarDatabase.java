@@ -1,11 +1,9 @@
 package com.example.carsapp_week2.provider;
 
 import android.content.Context;
-
 import androidx.room.Database;
 import androidx.room.Room;
 import androidx.room.RoomDatabase;
-
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -16,7 +14,7 @@ public abstract class CarDatabase extends RoomDatabase {
 
     public abstract CarDAO carDao();
 
-    //Ensure atomic access to the variable
+    //volatile: Ensure atomic access to the variable
     private static volatile CarDatabase INSTANCE = null;
 
     private static final int NUMBER_OF_THREADS = 4;
@@ -34,5 +32,6 @@ public abstract class CarDatabase extends RoomDatabase {
         }
         return INSTANCE;
     }
+
 
 }

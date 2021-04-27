@@ -1,0 +1,40 @@
+{
+  "project_info": {
+    "project_number": "350099663218",
+    "firebase_url": "https://fit2081-carapp-default-rtdb.firebaseio.com",
+    "project_id": "fit2081-carapp",
+    "storage_bucket": "fit2081-carapp.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:350099663218:android:305f86f3d187ce3ead55eb",
+        "android_client_info": {
+          "package_name": "com.example.carsapp_week2"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "350099663218-9to7f82ij57u5p7da2tesgv52vfljvge.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBNsHjc8oAuk99e_Wag-ZbL4UToC-U-jfQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "350099663218-9to7f82ij57u5p7da2tesgv52vfljvge.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

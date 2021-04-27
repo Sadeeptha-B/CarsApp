@@ -7,15 +7,16 @@ import androidx.appcompat.widget.Toolbar;
 import androidx.core.app.ActivityCompat;
 import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
+import androidx.lifecycle.ViewModelProvider;
 
 import android.Manifest;
 import android.content.BroadcastReceiver;
+import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -24,13 +25,16 @@ import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.Toast;
 
+import com.example.carsapp_week2.provider.Car;
+import com.example.carsapp_week2.provider.CarViewModel;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.navigation.NavigationView;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
 import com.google.gson.Gson;
-import com.google.gson.reflect.TypeToken;
 
-import java.lang.reflect.Type;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.StringTokenizer;
 
 public class MainActivity extends AppCompatActivity {
@@ -42,11 +46,12 @@ public class MainActivity extends AppCompatActivity {
     private static SharedPreferences.Editor singleCarFileEditor;
     public static final String SINGLE_CAR_FILE = "single_car_data";
 
-    private static SharedPreferences carsListFile;
-    private static SharedPreferences.Editor carsListEditor;
-    public static final String CARS_LIST_FILE = "CARS_LIST_FILE";
-    public static final String CARS_LIST = "CARS_LIST";
-
+    /*UI components */
+    DrawerLayout drawer;
+    Toolbar toolbar;
+    NavigationView navigationView;
+    FloatingActionButton fabBtn;
+    ListView listView;
 
     /*Fields*/
     private CompactEditText editTextMaker;
@@ -57,18 +62,13 @@ public class MainActivity extends AppCompatActivity {
     private CompactEditText editTextPrice;
     private CompactEditText editTextAddress;
 
-    /*UI components */
-    DrawerLayout drawer;
-    Toolbar toolbar;
-    NavigationView navigationView;
-    FloatingActionButton fabBtn;
-    ListView listView;
 
-    ArrayList<String> dataSource = new ArrayList<String>();
-    ArrayList<String> completeData = new ArrayList<String>();
+    ArrayAdapter<String> adapter;
+    public static CarViewModel mCarViewModel;
+    private int carCount;
 
-    ArrayAdapter adapter;
-    Gson gson = new Gson();
+    /* Firebase */
+    DatabaseReference myRef;
 
 
     @Override
@@ -80,40 +80,41 @@ public class MainActivity extends AppCompatActivity {
         ActivityCompat.requestPermissions(this,
                 new String[]{Manifest.permission.SEND_SMS, Manifest.permission.RECEIVE_SMS, Manifest.permission.READ_SMS}, 0);
 
+        initializeDataSources();
+        initializeUIComponents();
 
+        /* Firebase */
+        FirebaseDatabase database = FirebaseDatabase.getInstance();
+        myRef = database.getReference("cars");
+
+        /* Broadcast receiver*/
+        IntentFilter intentFilter = new IntentFilter(SMSReceiver.SMS_FILTER);
+        registerReceiver(myBroadcastReceiver, intentFilter);
+    }
+
+    /** Initializes shared preference files and fills the dataSource used for the
+     * ListView.**/
+    private void initializeDataSources(){
         /*SharedPreference Files */
         singleCarFile = getSharedPreferences(SINGLE_CAR_FILE, 0);
         singleCarFileEditor = singleCarFile.edit();
 
-        carsListFile = getSharedPreferences(CARS_LIST_FILE, 0);
-        carsListEditor = carsListFile.edit();
+        mCarViewModel = new ViewModelProvider(this).get(CarViewModel.class);
 
-        String cars = carsListFile.getString(CARS_LIST, "");
-
-        if (cars != ""){
-            Type type = new TypeToken<ArrayList<String>>() {}.getType();
-            completeData = gson.fromJson(cars, type);
-
-            for (int i=0; i< completeData.size(); i++){
-                String[] strArr = completeData.get(i).split("\\ \\|\\ ");
-                dataSource.add(strArr[0] + " | " + strArr[1]);
+        mCarViewModel.getAllCars().observe(this, newData -> {
+            List<String> listViewStr = new ArrayList<String>();
+            for (int i=0; i< newData.size(); i++){
+                listViewStr.add(newData.get(i).getMaker() + " | " + newData.get(i).getModel());
             }
-        }
+            adapter =  new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, listViewStr);
+            listView = findViewById(R.id.listView);
+            listView.setAdapter(adapter);
+            listView.setNestedScrollingEnabled(true);
+        });
 
-        initializeUIComponents();
-
-        /* Broadcast receivers*/
-        IntentFilter intentFilter = new IntentFilter(SMSReceiver.SMS_FILTER);
-        registerReceiver(myBroadcastReceiver, intentFilter);
-
-        //EditText field instantiated
-        editTextMaker = new CompactEditText(this, "editTextMaker");
-        editTextModel = new CompactEditText(this, "editTextModel");
-        editTextYear = new CompactEditText(this, "editTextYear");
-        editTextColor = new CompactEditText(this, "editTextColor");
-        editTextSeats = new CompactEditText(this, "editTextSeats");
-        editTextPrice = new CompactEditText(this, "editTextPrice");
-        editTextAddress = new CompactEditText(this, "editTextAddress");
+        mCarViewModel.getCarCount().observe(this, newData -> {
+            carCount = newData;
+        });
     }
 
 
@@ -142,38 +143,46 @@ public class MainActivity extends AppCompatActivity {
         });
 
         /*ListView*/
-        listView = findViewById(R.id.listView);
-        adapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, dataSource);
-        listView.setAdapter(adapter);
-        listView.setNestedScrollingEnabled(true);
+
+        //EditText field instantiated
+        editTextMaker = new CompactEditText(this, "editTextMaker");
+        editTextModel = new CompactEditText(this, "editTextModel");
+        editTextYear = new CompactEditText(this, "editTextYear");
+        editTextColor = new CompactEditText(this, "editTextColor");
+        editTextSeats = new CompactEditText(this, "editTextSeats");
+        editTextPrice = new CompactEditText(this, "editTextPrice");
+        editTextAddress = new CompactEditText(this, "editTextAddress");
     }
 
-
+    /** Retrieves only field data on start. **/
     @Override
     protected void onStart() {
         super.onStart();
-        retrieveStringElement(editTextMaker);
-        retrieveStringElement(editTextModel);
-        retrieveNumElement(editTextYear);
-        retrieveStringElement(editTextColor);
-        retrieveNumElement(editTextSeats);
-        retrieveNumElement(editTextPrice);
-        retrieveStringElement(editTextAddress);
+        retrieveStringField(editTextMaker);
+        retrieveStringField(editTextModel);
+        retrieveNumField(editTextYear);
+        retrieveStringField(editTextColor);
+        retrieveNumField(editTextSeats);
+        retrieveNumField(editTextPrice);
+        retrieveStringField(editTextAddress);
     }
 
+    /**Stores all data to be kept persistent when stopping the activity.
+    **/
     @Override
     protected void onStop() {
         super.onStop();
-        storeData();
+        storeFieldData();
     }
 
-
-    private void retrieveStringElement(CompactEditText field){
+    /** Retrieve text field data **/
+    private void retrieveStringField(CompactEditText field){
         String content = singleCarFile.getString(field.getKey(), "");
         field.setEditTextString(content);
     }
 
-    private void retrieveNumElement(CompactEditText field){
+    /** Retrieve number field data **/
+    private void retrieveNumField(CompactEditText field){
         int content = singleCarFile.getInt(field.getKey(), 0);
         if (content == 0){
             field.setEditTextString("");
@@ -182,8 +191,8 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    /*For storing persistent data*/
-    private void storeData(){
+    /** For storing field data persistently **/
+    private void storeFieldData(){
         singleCarFileEditor.putString(editTextMaker.getKey(), editTextMaker.getEditTextString());
         singleCarFileEditor.putString(editTextModel.getKey(), editTextModel.getEditTextString());
         singleCarFileEditor.putInt(editTextYear.getKey(), editTextYear.getEditTextNum());
@@ -192,54 +201,36 @@ public class MainActivity extends AppCompatActivity {
         singleCarFileEditor.putInt(editTextPrice.getKey(), editTextPrice.getEditTextNum());
         singleCarFileEditor.putString(editTextAddress.getKey(), editTextAddress.getEditTextString());
         singleCarFileEditor.apply();
-
-        String carsList = gson.toJson(completeData);
-        carsListEditor.putString(CARS_LIST, carsList).apply();
     }
 
-
     private void addCar(){
-        boolean added = !editTextMaker.getEditTextString().isEmpty();
+        boolean validEntry = !editTextMaker.getEditTextString().isEmpty();
         String msg;
 
-        if (added){
+        if (validEntry){
             msg = "We added a new car (" + editTextMaker.getEditTextString() +")";
-            dataSource.add(editTextMaker.getEditTextString() + " | " + editTextModel.getEditTextString());
-            completeData.add(generateAddString());
-            adapter.notifyDataSetChanged();
+            Car car = new Car(editTextMaker.getEditTextString(),editTextModel.getEditTextString(),editTextYear.getEditTextNum(),
+                    editTextColor.getEditTextString(), editTextSeats.getEditTextNum() ,editTextPrice.getEditTextNum(),editTextAddress.
+                    getEditTextString());
+            mCarViewModel.insert(car);
+            myRef.push().setValue(car);
         } else{
             msg = "Please enter a maker";
         }
         showToast(msg, Toast.LENGTH_SHORT);
     }
 
-    private String generateAddString(){
-        return editTextMaker.getEditTextString() + " | " + editTextModel.getEditTextString() + " | " +
-                editTextYear.getEditTextString() + " | " + editTextColor.getEditTextString() + " | " +
-                editTextSeats.getEditTextString() + " | " + editTextPrice.getEditTextString() + " | " +
-                editTextAddress.getEditTextString();
-    }
-
     private void removeLastCar(){
-        if (!dataSource.isEmpty()){
-            dataSource.remove(dataSource.size() - 1);
-            completeData.remove(completeData.size() - 1);
-            adapter.notifyDataSetChanged();
-        }
-
+//        mCarViewModel.deleteCar(carCount);
     }
 
     private void removeAllCars(){
-        if (!dataSource.isEmpty()){
-            dataSource.clear();
-            completeData.clear();
-            adapter.notifyDataSetChanged();
-        }
+        myRef.removeValue();
+        mCarViewModel.deleteAll();
     }
 
-    private void listAllItems(){
+    private void moveToListCarsActivity(){
         Intent carListIntent = new Intent(this, ListCarsActivity.class);
-        carListIntent.putExtra(CARS_LIST, completeData);
         startActivity(carListIntent);
     }
 
@@ -268,10 +259,9 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    /**Clear and forget persistent data.**/
+    /**Clear and forget persistent field data.**/
     private void clearAll(){
         clear();
-
         singleCarFileEditor.clear();
         singleCarFileEditor.apply();
     }
@@ -320,7 +310,7 @@ public class MainActivity extends AppCompatActivity {
                     removeAllCars();
                     break;
                 case R.id.list_all_items:
-                    listAllItems();
+                    moveToListCarsActivity();
                     break;
                 case R.id.close:
                     finish();
@@ -347,7 +337,7 @@ public class MainActivity extends AppCompatActivity {
                 clearAll();
                 break;
             case R.id.total_cars:
-                showToast("Total number of cars: " + dataSource.size(), Toast.LENGTH_SHORT);
+                showToast("Total number of cars: " + carCount, Toast.LENGTH_SHORT);
                 break;
         }
 

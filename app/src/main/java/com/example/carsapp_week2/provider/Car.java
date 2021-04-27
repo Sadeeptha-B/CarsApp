@@ -8,7 +8,7 @@ import androidx.room.PrimaryKey;
 /* Represents a table in the database. */
 @Entity(tableName = "cars")
 public class Car {
-    @PrimaryKey
+    @PrimaryKey(autoGenerate = true)
     @NonNull
     @ColumnInfo(name = "carId")
     private int id;

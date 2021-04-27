@@ -1,7 +1,6 @@
 package com.example.carsapp_week2.provider;
 
 import android.app.Application;
-
 import androidx.lifecycle.LiveData;
 
 import java.util.List;
@@ -28,6 +27,14 @@ public class CarRepository {
         CarDatabase.dataBaseWriteExecutor.execute(() -> {
             mCarDao.deleteAllCars();
         });
+    }
+
+    LiveData<Integer> getCarCount(){
+        return mCarDao.getCarCount();
+    }
+
+    void deleteCar(String model){
+        CarDatabase.dataBaseWriteExecutor.execute(() -> mCarDao.deleteCar(model));
     }
 
 }

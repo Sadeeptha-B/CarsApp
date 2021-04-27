@@ -14,8 +14,8 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.CarsApp_Week2">
-        <activity android:name=".ListCarsActivity"></activity>
 
+        <activity android:name=".ListCarsActivity" />
         <receiver
             android:name=".SMSReceiver"
             android:enabled="true"
@@ -33,6 +33,12 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <provider
+            android:name=".provider.MyContentProvider"
+            android:authorities="fit2081.app.sadeeptha.provider"
+            android:enabled="true"
+            android:exported="true"></provider>
     </application>
 
 </manifest>

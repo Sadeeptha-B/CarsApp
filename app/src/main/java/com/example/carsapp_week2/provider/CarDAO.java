@@ -20,10 +20,13 @@ public interface CarDAO {
     @Insert
     void addCar(Car car);
 
-    @Query("delete from cars where carId=:id")
-    void deleteCar(int id);
+    @Query("delete from cars where carModel=:model")
+    void deleteCar(String model);
 
     @Query("delete from cars")
     void deleteAllCars();
+
+    @Query("SELECT COUNT(*) from cars")
+    LiveData<Integer> getCarCount();
 }
 
