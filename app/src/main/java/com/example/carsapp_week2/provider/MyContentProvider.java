@@ -9,6 +9,7 @@ import android.net.Uri;
 
 import androidx.annotation.Nullable;
 
+/**Content provider for database **/
 public class MyContentProvider extends ContentProvider {
     CarDatabase db;
     private final String tableName = "cars";

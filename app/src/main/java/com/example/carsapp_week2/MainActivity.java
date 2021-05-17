@@ -1,6 +1,7 @@
 package com.example.carsapp_week2;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.ActionBarDrawerToggle;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
@@ -11,31 +12,33 @@ import androidx.lifecycle.ViewModelProvider;
 
 import android.Manifest;
 import android.content.BroadcastReceiver;
-import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.MotionEvent;
 import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.EditText;
-import android.widget.ListView;
 import android.widget.Toast;
 
 import com.example.carsapp_week2.provider.Car;
 import com.example.carsapp_week2.provider.CarViewModel;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.navigation.NavigationView;
+import com.google.firebase.database.ChildEventListener;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
-import com.google.gson.Gson;
 
 import java.util.ArrayList;
-import java.util.List;
 import java.util.StringTokenizer;
+import java.util.concurrent.Callable;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -47,11 +50,11 @@ public class MainActivity extends AppCompatActivity {
     public static final String SINGLE_CAR_FILE = "single_car_data";
 
     /*UI components */
+    View constraintLayout;
     DrawerLayout drawer;
     Toolbar toolbar;
     NavigationView navigationView;
     FloatingActionButton fabBtn;
-    ListView listView;
 
     /*Fields*/
     private CompactEditText editTextMaker;
@@ -70,11 +73,16 @@ public class MainActivity extends AppCompatActivity {
     /* Firebase */
     DatabaseReference myRef;
 
+    /*Touch Coordinates*/
+    double xInit;
+    double yInit;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.drawer_layout);
+
+        constraintLayout = findViewById(R.id.constraintLayout);
 
         /*Permissions*/
         ActivityCompat.requestPermissions(this,
@@ -84,16 +92,14 @@ public class MainActivity extends AppCompatActivity {
         initializeUIComponents();
 
         /* Firebase */
-        FirebaseDatabase database = FirebaseDatabase.getInstance();
-        myRef = database.getReference("cars");
+        firebaseInit();
 
         /* Broadcast receiver*/
         IntentFilter intentFilter = new IntentFilter(SMSReceiver.SMS_FILTER);
         registerReceiver(myBroadcastReceiver, intentFilter);
     }
 
-    /** Initializes shared preference files and fills the dataSource used for the
-     * ListView.**/
+    /** Initializes shared preference files and view model */
     private void initializeDataSources(){
         /*SharedPreference Files */
         singleCarFile = getSharedPreferences(SINGLE_CAR_FILE, 0);
@@ -101,22 +107,16 @@ public class MainActivity extends AppCompatActivity {
 
         mCarViewModel = new ViewModelProvider(this).get(CarViewModel.class);
 
-        mCarViewModel.getAllCars().observe(this, newData -> {
-            List<String> listViewStr = new ArrayList<String>();
-            for (int i=0; i< newData.size(); i++){
-                listViewStr.add(newData.get(i).getMaker() + " | " + newData.get(i).getModel());
-            }
-            adapter =  new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, listViewStr);
-            listView = findViewById(R.id.listView);
-            listView.setAdapter(adapter);
-            listView.setNestedScrollingEnabled(true);
-        });
-
         mCarViewModel.getCarCount().observe(this, newData -> {
             carCount = newData;
         });
     }
 
+    /** Get firebase instance and set reference. Create a listener to listen to changes **/
+    private void firebaseInit(){
+        FirebaseDatabase database = FirebaseDatabase.getInstance();
+        myRef = database.getReference("autoShowroom/fleet");
+    }
 
     private void initializeUIComponents(){
         /* Toolbar */
@@ -142,8 +142,6 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        /*ListView*/
-
         //EditText field instantiated
         editTextMaker = new CompactEditText(this, "editTextMaker");
         editTextModel = new CompactEditText(this, "editTextModel");
@@ -152,6 +150,41 @@ public class MainActivity extends AppCompatActivity {
         editTextSeats = new CompactEditText(this, "editTextSeats");
         editTextPrice = new CompactEditText(this, "editTextPrice");
         editTextAddress = new CompactEditText(this, "editTextAddress");
+
+        constraintLayout.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                int action = event.getActionMasked();
+                switch (action){
+                    case MotionEvent.ACTION_DOWN:
+                        xInit = event.getX();
+                        yInit = event.getY();
+
+                        if (yInit < 100){
+                            if (xInit < 100) {
+                                int price = editTextPrice.getEditTextNum();
+                                editTextPrice.setEditTextNum(price < 50 ? 0 : price - 50);
+                                showToast("$50 subtracted with a minimum of $0", Toast.LENGTH_SHORT);
+                            } else if (constraintLayout.getWidth() - xInit < 100){
+                                editTextPrice.setEditTextNum(editTextPrice.getEditTextNum() + 50);
+                                showToast("$50 added", Toast.LENGTH_SHORT);
+                            }
+                        }
+
+                        break;
+                    case MotionEvent.ACTION_UP:
+                        if (Math.abs(yInit - event.getY()) < 40) {
+                            leftToRightAction(xInit, event.getX());
+                        }
+                        if (Math.abs(xInit - event.getX()) < 40) {
+                            topToBottomAction(yInit, event.getY());
+                        }
+                        break;
+                }
+
+                return true;
+            }
+        });
     }
 
     /** Retrieves only field data on start. **/
@@ -342,5 +375,19 @@ public class MainActivity extends AppCompatActivity {
         }
 
         return true;
+    }
+
+    private void leftToRightAction(double xInit, double currentX){
+        if (xInit - currentX < 0) {
+            showToast("Left to right gesture", Toast.LENGTH_SHORT);
+            addCar();
+        }
+    }
+
+    private void topToBottomAction(double yInit, double currentY){
+        if (yInit - currentY < 0){
+            showToast("Top to bottom gesture: Cleared", Toast.LENGTH_SHORT);
+            clear();
+        }
     }
 }
